@@ -6,6 +6,7 @@ import base64
 import json
 import os
 import sys
+import traceback
 from pathlib import Path
 
 # Windows consoles default to cp1252, which cannot encode the status emoji this
@@ -60,11 +61,19 @@ app.add_middleware(
 # Load zone profiles on startup
 zone_profiles = {}
 city_baseline = {}
+_ready = False
 
 
-@app.on_event("startup")
-async def startup():
-    global zone_profiles, city_baseline
+async def _ensure_ready() -> None:
+    """Build the zone profiles once, on whichever path reaches us first.
+
+    Called from the startup event and again from the HTTP middleware, because a
+    serverless host may skip ASGI lifespan entirely — an empty `zone_profiles`
+    would then make every zone lookup a 404. Idempotent via `_ready`.
+    """
+    global zone_profiles, city_baseline, _ready
+    if _ready:
+        return
 
     # Anchor the heat model to a measured baseline before any profile is built,
     # so no profile is ever derived from the offline fallback when the real
@@ -80,6 +89,7 @@ async def startup():
         print("Baseline: NASA POWER unreachable, using unverified fallback")
 
     zone_profiles = build_all_profiles()
+    _ready = True
     print(f"✅ Loaded {len(zone_profiles)} zone profiles")
 
     # Check API keys
@@ -92,6 +102,25 @@ async def startup():
         print("✅ OpenWeatherMap API key loaded — live weather enabled")
     else:
         print("⚠️  No OPENWEATHERMAP_API_KEY — using Chennai summer averages")
+
+
+@app.middleware("http")
+async def ensure_ready_middleware(request, call_next):
+    try:
+        await _ensure_ready()
+    except Exception:
+        # Never let a cold-start failure crash the worker: log it and let the
+        # request proceed so /health can still report zones_loaded == 0.
+        traceback.print_exc()
+    return await call_next(request)
+
+
+@app.on_event("startup")
+async def startup():
+    try:
+        await _ensure_ready()
+    except Exception:
+        traceback.print_exc()
 
 
 @app.get("/api/provenance")
