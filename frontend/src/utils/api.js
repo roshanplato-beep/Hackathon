@@ -21,6 +21,9 @@ export async function fetchThermalConfig(layer) {
   if (config.tile_url_is_relative) {
     config.tile_url_template = `${API_BASE}${config.tile_url_template}`;
   }
+  if (config.proxy_url_template?.startsWith('/')) {
+    config.proxy_url_template = `${API_BASE}${config.proxy_url_template}`;
+  }
   return config;
 }
 

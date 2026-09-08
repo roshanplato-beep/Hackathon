@@ -48,6 +48,20 @@ function lift(positions) {
   })
 }
 
+async function loadBoundaryGeoJson(url) {
+  const res = await fetch(url)
+  const type = res.headers.get('content-type') ?? ''
+  if (!res.ok || !type.includes('json')) {
+    throw new Error(`Expected GeoJSON from ${url}, got ${res.status} ${type || 'unknown content'}`)
+  }
+  const data = await res.json()
+  // Natural Earth exports a legacy CRS member. Coordinates are already WGS84
+  // longitude/latitude, and removing it avoids Cesium attempting extra CRS
+  // metadata fetches that can fail under static hosting rewrites.
+  delete data.crs
+  return data
+}
+
 /**
  * Load both boundary sets into the viewer.
  *
@@ -60,7 +74,8 @@ export async function addBoundaries(viewer) {
 
   for (const layer of LAYERS) {
     try {
-      const source = await GeoJsonDataSource.load(layer.url, {
+      const data = await loadBoundaryGeoJson(layer.url)
+      const source = await GeoJsonDataSource.load(data, {
         stroke: layer.color,
         strokeWidth: layer.width,
         // Boundary files are line geometry; this only guards stray polygons.

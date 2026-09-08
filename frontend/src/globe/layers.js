@@ -32,7 +32,7 @@ export function labelsProvider() {
  */
 export function thermalProvider(config) {
   return new UrlTemplateImageryProvider({
-    url: config.tile_url_template,
+    url: config.proxy_url_template ?? config.tile_url_template,
     tilingScheme: new WebMercatorTilingScheme(),
     tileWidth: config.tile_size,
     tileHeight: config.tile_size,

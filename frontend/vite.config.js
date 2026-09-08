@@ -71,8 +71,9 @@ export default defineConfig({
     serveCesium(),
     viteStaticCopy({
       targets: CESIUM_DIRS.map(name => ({
-        src: join(CESIUM_ABS, name).replace(/\\/g, '/'),
-        dest: 'cesium',
+        src: join(CESIUM_ABS, name, '**/*').replace(/\\/g, '/'),
+        dest: `cesium/${name}`,
+        rename: { stripBase: true },
       })),
     }),
   ],

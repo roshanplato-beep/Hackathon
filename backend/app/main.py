@@ -524,13 +524,12 @@ async def thermal_tile(
             detail="OPENWEATHERMAP_API_KEY is not set; the live air-temperature layer is unavailable.",
         )
 
-    # No coverage for this tile is normal (ocean, swath gap) — hand back a
-    # transparent pixel so the client does not log it as an error.
-    if status == 404:
+    # No coverage, expired dates, or transient upstream errors should not hand
+    # Cesium a JSON/HTML error body to decode as an image. The visual meaning is
+    # simply "no usable thermal pixel here", so return a transparent tile.
+    if status != 200 or not content_type.startswith("image/"):
         return Response(content=TRANSPARENT_PNG, media_type="image/png",
                         headers={"Cache-Control": "public, max-age=3600"})
-    if status != 200:
-        raise HTTPException(status_code=502, detail=f"GIBS returned {status}")
 
     return Response(content=body, media_type=content_type,
                     headers={"Cache-Control": "public, max-age=3600"})

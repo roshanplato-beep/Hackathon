@@ -75,6 +75,7 @@ export default function GlobeLanding({ zones, onEnter }) {
         fullscreenButton: false,
         infoBox: false,
         selectionIndicator: false,
+        showRenderLoopErrors: false,
         creditContainer: document.createElement('div'),
       })
     } catch (e) {
@@ -83,6 +84,16 @@ export default function GlobeLanding({ zones, onEnter }) {
     }
     viewer.current = v
     if (import.meta.env.DEV) window.viewer = v
+
+    // A single bad remote image tile should never take down the landing page.
+    // Cesium can surface browser decode failures as render-loop errors, so keep
+    // rendering and let the normal tile retry/fallback path recover.
+    v.scene.rethrowRenderErrors = false
+    const onRenderError = (_scene, error) => {
+      console.warn('Cesium render error suppressed:', error)
+      v.useDefaultRenderLoop = true
+    }
+    v.scene.renderError.addEventListener(onRenderError)
 
     v.scene.globe.baseColor = Color.BLACK
 
@@ -157,6 +168,7 @@ export default function GlobeLanding({ zones, onEnter }) {
 
     return () => {
       removeBoundaries(v, boundarySources)
+      v.scene.renderError.removeEventListener(onRenderError)
       v.clock.onTick.removeEventListener(tick)
       v.scene.globe.tileLoadProgressEvent.removeEventListener(onTileProgress)
       input.destroy()
