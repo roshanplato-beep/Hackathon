@@ -6,7 +6,8 @@
   "outputDirectory": "frontend/dist",
   "functions": {
     "api/index.py": {
-      "includeFiles": "backend/**"
+      "includeFiles": "backend/**",
+      "excludeFiles": "{frontend/**,node_modules/**,.git/**,outputs/**,**/__pycache__/**,backend/test_*.py}"
     }
   },
   "headers": [
