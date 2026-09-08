@@ -1,0 +1,146 @@
+[
+  {
+    "id": "tambaram",
+    "name": "Tambaram",
+    "center": [12.9249, 80.1000],
+    "bounds": [[12.910, 80.085], [12.940, 80.115]],
+    "type": "demo_hotspot",
+    "description": "Major suburban transport hub with dense commercial area around railway station"
+  },
+  {
+    "id": "meenambakkam",
+    "name": "Meenambakkam",
+    "center": [12.9940, 80.1690],
+    "bounds": [[12.980, 80.155], [13.008, 80.183]],
+    "type": "demo_hotspot",
+    "description": "Airport zone with large paved surfaces, sparse vegetation"
+  },
+  {
+    "id": "guindy_kathipara",
+    "name": "Guindy (Kathipara)",
+    "center": [13.0067, 80.2206],
+    "bounds": [[12.993, 80.207], [13.020, 80.234]],
+    "type": "demo_hotspot",
+    "description": "Asia's largest cloverleaf junction — massive concrete heat island"
+  },
+  {
+    "id": "koyambedu",
+    "name": "Koyambedu",
+    "center": [13.0694, 80.1948],
+    "bounds": [[13.056, 80.181], [13.083, 80.209]],
+    "type": "demo_hotspot",
+    "description": "Wholesale market hub with vast paved areas, high vehicle density"
+  },
+  {
+    "id": "mount_road",
+    "name": "Mount Road (Anna Salai)",
+    "center": [13.0569, 80.2539],
+    "bounds": [[13.043, 80.240], [13.071, 80.268]],
+    "type": "demo_hotspot",
+    "description": "Chennai's main commercial corridor — dense traffic, buildings, minimal greenery"
+  },
+  {
+    "id": "t_nagar",
+    "name": "T. Nagar",
+    "center": [13.0418, 80.2341],
+    "bounds": [[13.028, 80.220], [13.056, 80.248]],
+    "type": "secondary",
+    "description": "One of India's busiest shopping districts, extremely dense commercial zone"
+  },
+  {
+    "id": "adyar",
+    "name": "Adyar",
+    "center": [13.0012, 80.2565],
+    "bounds": [[12.988, 80.243], [13.015, 80.270]],
+    "type": "secondary",
+    "description": "Mixed residential-institutional with Adyar River and Theosophical Society greens"
+  },
+  {
+    "id": "velachery",
+    "name": "Velachery",
+    "center": [12.9815, 80.2180],
+    "bounds": [[12.968, 80.204], [12.995, 80.232]],
+    "type": "secondary",
+    "description": "Rapidly urbanized IT corridor, former marshland now densely built"
+  },
+  {
+    "id": "nungambakkam",
+    "name": "Nungambakkam",
+    "center": [13.0600, 80.2400],
+    "bounds": [[13.047, 80.227], [13.073, 80.253]],
+    "type": "secondary",
+    "description": "Central business area with mixed commercial and residential"
+  },
+  {
+    "id": "perambur",
+    "name": "Perambur",
+    "center": [13.1130, 80.2330],
+    "bounds": [[13.100, 80.219], [13.126, 80.247]],
+    "type": "secondary",
+    "description": "Dense residential with railway workshops, industrial character"
+  },
+  {
+    "id": "sholinganallur",
+    "name": "Sholinganallur",
+    "center": [12.9010, 80.2270],
+    "bounds": [[12.888, 80.213], [12.914, 80.241]],
+    "type": "secondary",
+    "description": "IT corridor with tech parks and new residential towers"
+  },
+  {
+    "id": "anna_nagar",
+    "name": "Anna Nagar",
+    "center": [13.0850, 80.2100],
+    "bounds": [[13.072, 80.196], [13.098, 80.224]],
+    "type": "secondary",
+    "description": "Planned residential area with Tower Park, moderate green cover"
+  },
+  {
+    "id": "porur",
+    "name": "Porur",
+    "center": [13.0350, 80.1560],
+    "bounds": [[13.022, 80.142], [13.048, 80.170]],
+    "type": "secondary",
+    "description": "Lake area transitioning to IT and healthcare hub"
+  },
+  {
+    "id": "mylapore",
+    "name": "Mylapore",
+    "center": [13.0337, 80.2676],
+    "bounds": [[13.020, 80.254], [13.047, 80.281]],
+    "type": "secondary",
+    "description": "Heritage area with temples, dense residential, near Marina Beach"
+  },
+  {
+    "id": "ambattur",
+    "name": "Ambattur",
+    "center": [13.1143, 80.1548],
+    "bounds": [[13.101, 80.141], [13.128, 80.169]],
+    "type": "secondary",
+    "description": "Industrial estate with Ambattur Lake, mixed industrial-residential"
+  },
+  {
+    "id": "marina_beach",
+    "name": "Marina Beach",
+    "center": [13.0500, 80.2820],
+    "bounds": [[13.037, 80.272], [13.063, 80.292]],
+    "type": "cool_zone",
+    "description": "Coastal zone with sea breeze effect, major open space"
+  },
+  {
+    "id": "iit_madras",
+    "name": "IIT Madras / Guindy NP",
+    "center": [12.9916, 80.2336],
+    "bounds": [[12.978, 80.220], [13.005, 80.247]],
+    "type": "cool_zone",
+    "description": "Dense urban forest — IIT campus + Guindy National Park, highest NDVI in city"
+  },
+  {
+    "id": "adyar_eco_park",
+    "name": "Adyar Eco Park",
+    "center": [13.0080, 80.2680],
+    "bounds": [[12.998, 80.258], [13.018, 80.278]],
+    "type": "cool_zone",
+    "description": "Restored estuary and mangrove ecosystem at Adyar River mouth"
+  }
+]

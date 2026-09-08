@@ -1,0 +1,12 @@
+**/node_modules/
+**/dist/
+**/.env
+**/.env.*
+**/.venv/
+**/__pycache__/
+**/*.pyc
+.vercel/
+backend/data/zone_plans.json
+backend/data/zone_surveys.json
+backend/data/weather_cache.json
+backend/data/thermal_cache.json

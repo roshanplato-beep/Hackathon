@@ -1,0 +1,31 @@
+{
+  "chennai_baseline": {
+    "annual_mean_skin_c": 28.81,
+    "annual_mean_air_c": 27.95,
+    "monthly_skin_c": {
+      "JAN": 24.69,
+      "FEB": 26.94,
+      "MAR": 30.55,
+      "APR": 32.72,
+      "MAY": 32.76,
+      "JUN": 31.27,
+      "JUL": 30.19,
+      "AUG": 29.38,
+      "SEP": 28.72,
+      "OCT": 27.91,
+      "NOV": 25.98,
+      "DEC": 24.56
+    },
+    "peak_month": "MAY",
+    "peak_month_skin_c": 32.76,
+    "grid_point": [
+      80.22,
+      13.0
+    ],
+    "measured": true,
+    "source": "NASA POWER (MERRA-2) climatology, parameter TS",
+    "source_url": "https://power.larc.nasa.gov/",
+    "resolution_note": "~0.5 degree grid (~50km). One cell covers all of Chennai, so this is a city baseline and cannot differentiate wards.",
+    "fetched_at": "2026-09-07T16:05:01.244599+00:00"
+  }
+}

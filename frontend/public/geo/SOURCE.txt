@@ -1,0 +1,8 @@
+Administrative boundary lines from Natural Earth (public domain).
+
+  countries.geojson  ne_50m_admin_0_boundary_lines_land   390 features
+  states.geojson     ne_50m_admin_1_states_provinces_lines 581 features
+
+https://www.naturalearthdata.com/
+Terms: public domain, no permission or attribution required (attribution
+appreciated and given in the app credit line).
