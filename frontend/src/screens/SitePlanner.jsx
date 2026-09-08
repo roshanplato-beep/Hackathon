@@ -45,6 +45,8 @@ export default function SitePlanner({ selectedZone }) {
     )
   }
 
+  if (interventions.length === 0) return <div className="screen-empty"><h2>Site planner unavailable</h2><p>{selectedZone.name}: verified local rates, land availability, and cooling-effect evidence are not connected. Fallback plans and totals are hidden.</p></div>;
+
   const govtLand = selectedZone.govt_land_area_sqm || 0
   const zoneArea = selectedZone.zone_area_sqm || 1
   const overBudget = allocated > govtLand

@@ -98,7 +98,7 @@ def compute_heat_risk_score(lst: float, ndvi: float, building_density_pct: float
 
 
 def get_heat_color(score: float) -> str:
-    """Return hex color for heat risk score (green to red gradient)."""
+    """Return hex color for heat risk score (blue to red gradient)."""
     if score >= 80:
         return "#dc2626"  # red-600
     elif score >= 65:
@@ -108,9 +108,9 @@ def get_heat_color(score: float) -> str:
     elif score >= 35:
         return "#ca8a04"  # yellow-600
     elif score >= 20:
-        return "#65a30d"  # lime-600
+        return "#3b82f6"  # blue-500
     else:
-        return "#16a34a"  # green-600
+        return "#2563eb"  # blue-600
 
 
 def get_heat_color_rgba(score: float, alpha: float = 0.6) -> str:
@@ -124,9 +124,9 @@ def get_heat_color_rgba(score: float, alpha: float = 0.6) -> str:
     elif score >= 35:
         return f"rgba(202, 138, 4, {alpha})"
     elif score >= 20:
-        return f"rgba(101, 163, 13, {alpha})"
+        return f"rgba(59, 130, 246, {alpha})"
     else:
-        return f"rgba(22, 163, 74, {alpha})"
+        return f"rgba(37, 99, 235, {alpha})"
 
 
 def select_interventions(zone_profile: dict) -> list:
@@ -164,9 +164,9 @@ def select_interventions(zone_profile: dict) -> list:
                                         intervention["temp_drop_per_10pct_canopy"] * (intervention["estimated_trees"] * 25 / zone_area * 100 / 10))
         intervention["temp_drop"] = max(0.5, round(intervention["temp_drop"], 1))
     else:
-        park_area = min(gl * 0.3, 5000)  # Use 30% of govt land, max 5000 sqm
+        park_area = gl * 0.03  # Concept scenario: 3% of institutional land
         intervention["estimated_area_sqm"] = round(park_area, 0)
-        intervention["estimated_cost_inr"] = round(park_area * intervention["cost_per_sqm_inr"])
+        intervention["estimated_cost_inr"] = round(intervention["estimated_area_sqm"] * intervention["cost_per_sqm_inr"])
         intervention["temp_drop"] = intervention["temp_drop"]
 
     intervention["area_affected_sqm"] = round(math.pi * intervention["effect_radius_m"] ** 2, 0)
@@ -183,16 +183,16 @@ def select_interventions(zone_profile: dict) -> list:
     intervention = all_interventions[cool_pick].copy()
     if cool_pick == "cool_roof_lime":
         roof_area = bd / 100 * zone_area * 0.1  # 10% of buildings
-        intervention["estimated_area_sqm"] = round(min(roof_area, 50000), 0)
+        intervention["estimated_area_sqm"] = round(roof_area, 0)
         intervention["estimated_cost_inr"] = round(intervention["estimated_area_sqm"] * intervention["cost_per_sqm_inr"])
         intervention["temp_drop"] = intervention["temp_drop_ambient"]
     elif cool_pick == "reflective_road_paint":
         road_area = rc / 100 * zone_area * 0.05  # 5% of roads
-        intervention["estimated_area_sqm"] = round(min(road_area, 20000), 0)
+        intervention["estimated_area_sqm"] = round(road_area, 0)
         intervention["estimated_cost_inr"] = round(intervention["estimated_area_sqm"] * intervention["cost_per_sqm_inr"])
         intervention["temp_drop"] = intervention["temp_drop_ambient"]
     else:
-        num_units = max(5, int(zone_area / 50000))
+        num_units = max(1, round(zone_area * rc / 100 * 0.005 / intervention["coverage_sqm_per_unit"]))
         intervention["estimated_units"] = num_units
         intervention["estimated_cost_inr"] = num_units * intervention["cost_per_unit_inr"]
         intervention["temp_drop"] = intervention["temp_drop_ambient"]
@@ -201,7 +201,7 @@ def select_interventions(zone_profile: dict) -> list:
     selected.append(intervention)
 
     # WATER category
-    if wp < 500:
+    if wp < 500 and zone_profile.get("water_body_count", 0) > 0:
         water_pick = "water_body_restoration"
     elif rc > 20:
         water_pick = "permeable_paving"
@@ -210,23 +210,43 @@ def select_interventions(zone_profile: dict) -> list:
 
     intervention = all_interventions[water_pick].copy()
     if water_pick == "water_body_restoration":
-        channel_length = 200  # meters of channel
+        channel_length = round(math.sqrt(zone_area) * 0.1 * max(0, 1 - wp / 2000), 1)  # Survey required
         intervention["estimated_channel_m"] = channel_length
         intervention["estimated_cost_inr"] = channel_length * intervention["cost_per_meter_channel_inr"]
         intervention["temp_drop"] = intervention["temp_drop"]
     elif water_pick == "permeable_paving":
-        pave_area = min(zone_area * 0.02, 10000)  # 2% of zone
+        pave_area = zone_area * rc / 100 * 0.05  # 5% of road footprint
         intervention["estimated_area_sqm"] = round(pave_area, 0)
-        intervention["estimated_cost_inr"] = round(pave_area * intervention["cost_per_sqm_inr"])
+        intervention["estimated_cost_inr"] = round(intervention["estimated_area_sqm"] * intervention["cost_per_sqm_inr"])
         intervention["temp_drop"] = intervention["temp_drop_ambient"]
     else:
-        corridor_length = 300  # meters
+        corridor_length = round(math.sqrt(zone_area) * rc / 100 * 0.2, 1)
         intervention["estimated_length_m"] = corridor_length
         intervention["estimated_cost_inr"] = round(corridor_length / 100 * intervention["cost_per_100m_inr"])
         intervention["temp_drop"] = intervention["temp_drop_ambient"]
 
     intervention["area_affected_sqm"] = round(math.pi * intervention["effect_radius_m"] ** 2, 0)
     selected.append(intervention)
+
+    # Area-weighted concept scenario, not a validated temperature forecast.
+    for intv in selected:
+        local_drop = intv["temp_drop"]
+        footprint = intv.get("estimated_area_sqm",
+            intv.get("estimated_trees", 0) * 25
+            or intv.get("estimated_units", 0) * intv.get("coverage_sqm_per_unit", 25)
+            or intv.get("estimated_channel_m", 0) * 10
+            or intv.get("estimated_length_m", 0) * 5)
+        affected = min(zone_area, math.pi * intv["effect_radius_m"] ** 2, footprint * 10)
+        intv["area_affected_sqm"] = round(affected, 1)
+        intv["local_reference_drop_c"] = local_drop
+        intv["temp_drop"] = round(local_drop * affected / max(zone_area, 1), 4)
+        intv["planning_basis"] = (
+            "Quantity × catalogue unit rate; rates are unverified planning assumptions, "
+            "not live contractor quotes. Zone-average cooling = local reference × "
+            "influence area / zone area. Influence area assumes 10× treated footprint, "
+            "capped by reference radius and zone area; not a validated prediction."
+        )
+        intv["input_source"] = "OSM-derived mapped features" if zone_profile.get("osm_fetched") else "Fallback morphology assumptions"
 
     # Rank by cost efficiency
     for i, intv in enumerate(selected):
@@ -292,6 +312,9 @@ def build_zone_profile(zone: dict, osm_data: dict) -> dict:
         "estimated_households": zd["building_count"],
         "estimated_population": zd["building_count"] * 4.2,
         # Data source
+        "baseline_lst": CITY_BASELINE_LST,
+        "osm_fetched_at": zd.get("fetched_at"),
+        "morphology_note": zd.get("source_note", "Fallback morphology assumptions; not surveyed"),
         "osm_fetched": zd.get("osm_fetched", False)
     }
 
@@ -339,6 +362,11 @@ def simulate_intervention(zone_profiles: dict, zone_id: str, intervention_id: st
     if not target:
         return {"error": f"Unknown zone: {zone_id}"}
 
+    intervention = next((i for i in select_interventions(target)
+                         if i["id"] == intervention_id), None)
+    if intervention is None:
+        return {"error": "Intervention is not a current recommendation for this zone"}
+
     # Get temperature drop
     temp_drop = intervention.get("temp_drop",
                  intervention.get("temp_drop_ambient",
@@ -357,11 +385,11 @@ def simulate_intervention(zone_profiles: dict, zone_id: str, intervention_id: st
         else:
             continue
 
-        if reduction < 0.05:
+        if reduction <= 0:
             continue
 
         new_lst = profile["lst_celsius"] - reduction
-        new_lst = max(28.0, round(new_lst, 1))
+        new_lst = round(new_lst, 4)
         new_score = compute_heat_risk_score(
             new_lst, profile["ndvi"],
             profile["building_density_pct"],
@@ -372,7 +400,7 @@ def simulate_intervention(zone_profiles: dict, zone_id: str, intervention_id: st
         affected_zones[zid] = {
             "original_lst": profile["lst_celsius"],
             "new_lst": new_lst,
-            "temp_reduction": round(reduction, 1),
+            "temp_reduction": round(reduction, 4),
             "original_score": profile["heat_risk_score"],
             "new_score": new_score,
             "new_color": get_heat_color(new_score),
@@ -389,7 +417,7 @@ def simulate_intervention(zone_profiles: dict, zone_id: str, intervention_id: st
         "intervention": intervention,
         "target_zone": zone_id,
         "affected_zones": affected_zones,
-        "total_temp_reduction": round(temp_drop, 1),
+        "total_temp_reduction": round(temp_drop, 4),
         "effect_radius_m": effect_radius
     }
 

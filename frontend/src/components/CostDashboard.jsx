@@ -13,38 +13,50 @@ export default function CostDashboard({ interventions, zone }) {
   }));
 
   const totalCost = interventions.reduce((s, i) => s + (i.estimated_cost_inr || 0), 0);
-  const totalTempDrop = Math.max(...interventions.map(i => i.temp_drop || i.temp_drop_ambient || i.max_drop || 0));
-  const totalArea = interventions.reduce((s, i) => s + (i.area_affected_sqm || 0), 0);
+  const totalTempDrop = Math.max(0, ...interventions.map(i => i.temp_drop || i.temp_drop_ambient || i.max_drop || 0));
+  const totalArea = Math.max(0, ...interventions.map(i => i.area_affected_sqm || 0));
 
   return (
     <div className="cost-dashboard">
+      <p className="zone-desc">Scenario for {zone.name}. {zone.osm_fetched ? 'Uses OSM-derived mapped coverage.' : 'Uses fallback morphology; live mapping unavailable.'} Costs use fixed, unverified catalogue rates—not live quotes. Cooling is an area-weighted concept estimate, not a measured outcome. Influence areas can overlap; population is not a verified beneficiary count.</p>
+      <details>
+        <summary>Quantities and calculation assumptions</summary>
+        {interventions.map(i => <p key={i.id}>
+          <strong>{i.name}:</strong> {i.estimated_area_sqm != null ? `${i.estimated_area_sqm.toLocaleString()} m²` :
+            i.estimated_trees != null ? `${i.estimated_trees} trees` :
+            i.estimated_units != null ? `${i.estimated_units} units` :
+            `${i.estimated_channel_m ?? i.estimated_length_m} m`}
+          {' · ₹'}{(i.cost_per_sqm_inr ?? i.cost_per_tree_inr ?? i.cost_per_unit_inr ?? i.cost_per_meter_channel_inr ?? (i.cost_per_100m_inr / 100)).toLocaleString()} per unit.
+          {' '}{i.planning_basis}
+        </p>)}
+      </details>
       {/* Summary stats */}
       <div className="dash-stats">
         <div className="dash-stat">
           <div className="dash-stat-value">₹{formatLakhs(totalCost)}</div>
-          <div className="dash-stat-label">Total Investment</div>
+          <div className="dash-stat-label">Indicative Works Cost</div>
         </div>
         <div className="dash-stat">
-          <div className="dash-stat-value" style={{ color: '#22c55e' }}>
-            -{totalTempDrop}°C
+          <div className="dash-stat-value" style={{ color: '#3b82f6' }}>
+            -{totalTempDrop.toFixed(3)}°C
           </div>
-          <div className="dash-stat-label">Max Cooling</div>
+          <div className="dash-stat-label">Best Single Option · Zone Avg</div>
         </div>
         <div className="dash-stat">
           <div className="dash-stat-value">{(totalArea / 1000).toFixed(0)}K</div>
-          <div className="dash-stat-label">Area (sqm)</div>
+          <div className="dash-stat-label">Largest Influence Area (sqm)</div>
         </div>
         <div className="dash-stat">
           <div className="dash-stat-value">
             {Math.round(zone.estimated_population || 0).toLocaleString()}
           </div>
-          <div className="dash-stat-label">People Benefit</div>
+          <div className="dash-stat-label">Population Proxy · Not Beneficiaries</div>
         </div>
       </div>
 
       {/* Temperature drop comparison */}
       <div className="chart-container">
-        <h4>Temperature Reduction (°C)</h4>
+        <h4>Modelled Zone-Average Reduction (°C)</h4>
         <ResponsiveContainer width="100%" height={160}>
           <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#333" />

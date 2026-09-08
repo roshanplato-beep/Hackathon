@@ -22,6 +22,8 @@ Google Earth Engine. Until those are configured, ward-level contrast comes from
 the morphology model in heat_engine, and every response says so.
 """
 import json
+import time
+import math
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -34,6 +36,8 @@ CACHE_TTL_DAYS = 30
 
 POWER_URL = "https://power.larc.nasa.gov/api/temporal/climatology/point"
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
+
+_LIVE_CACHE = {}
 
 CHENNAI = {"latitude": 13.0, "longitude": 80.22}
 
@@ -158,27 +162,34 @@ async def fetch_live_air_temps(points: list[tuple[float, float]]) -> list[dict]:
     """
     if not points:
         return []
+    cache_key = tuple(points)
+    cached = _LIVE_CACHE.get(cache_key)
+    if cached and time.time() - cached[0] < 600:
+        return [dict(r, status="cached") for r in cached[1]]
     lats = ",".join(f"{p[0]:.4f}" for p in points)
     lons = ",".join(f"{p[1]:.4f}" for p in points)
     params = {
         "latitude": lats,
         "longitude": lons,
-        "current": "temperature_2m,apparent_temperature,relative_humidity_2m",
+        "current": "temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m",
         "timezone": "UTC",
+        "wind_speed_unit": "ms",
     }
     try:
-        async with httpx.AsyncClient(timeout=20.0) as client:
+        async with httpx.AsyncClient(timeout=8.0) as client:
             res = await client.get(OPEN_METEO_URL, params=params)
             res.raise_for_status()
             body = res.json()
     except Exception as e:
         print(f"Open-Meteo unavailable: {e}")
-        return []
+        return [dict(r, status="stale") for r in cached[1]] if cached else []
 
     entries = body if isinstance(body, list) else [body]
     out = []
     for requested, got in zip(points, entries):
         current = got.get("current", {})
+        if not isinstance(current.get("temperature_2m"), (int, float)) or not math.isfinite(current["temperature_2m"]):
+            return []
         out.append({
             "requested": {"latitude": requested[0], "longitude": requested[1]},
             "grid": {"latitude": got.get("latitude"), "longitude": got.get("longitude")},
@@ -186,12 +197,16 @@ async def fetch_live_air_temps(points: list[tuple[float, float]]) -> list[dict]:
             "air_temp_c": current.get("temperature_2m"),
             "apparent_temp_c": current.get("apparent_temperature"),
             "humidity_pct": current.get("relative_humidity_2m"),
+            "wind_speed_mps": current.get("wind_speed_10m"),
+            "status": "current",
             "observed_at": current.get("time"),
-            "measured": True,
+            "measured": False,
+            "data_kind": "weather_model",
             "quantity": "2m air temperature",
             "source": "Open-Meteo",
             "source_url": "https://open-meteo.com/",
         })
+    _LIVE_CACHE[cache_key] = (time.time(), out)
     return out
 
 

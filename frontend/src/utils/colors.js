@@ -4,21 +4,23 @@
  */
 
 export function getHeatColor(score) {
+  if (!Number.isFinite(score)) return '#8494a5';
   if (score >= 80) return '#dc2626';
   if (score >= 65) return '#ea580c';
   if (score >= 50) return '#d97706';
   if (score >= 35) return '#ca8a04';
-  if (score >= 20) return '#65a30d';
-  return '#16a34a';
+  if (score >= 20) return '#3b82f6';
+  return '#2563eb';
 }
 
 export function getHeatColorRgba(score, alpha = 0.55) {
+  if (!Number.isFinite(score)) return 'rgba(132,148,165,0.15)';
   if (score >= 80) return `rgba(220, 38, 38, ${alpha})`;
   if (score >= 65) return `rgba(234, 88, 12, ${alpha})`;
   if (score >= 50) return `rgba(217, 119, 6, ${alpha})`;
   if (score >= 35) return `rgba(202, 138, 4, ${alpha})`;
-  if (score >= 20) return `rgba(101, 163, 13, ${alpha})`;
-  return `rgba(22, 163, 74, ${alpha})`;
+  if (score >= 20) return `rgba(59, 130, 246, ${alpha})`;
+  return `rgba(37, 99, 235, ${alpha})`;
 }
 
 export function getRiskLabel(score) {
@@ -33,7 +35,7 @@ export function getRiskBadgeColor(level) {
     case 'Critical': return { bg: '#991b1b', text: '#fca5a5' };
     case 'High': return { bg: '#9a3412', text: '#fdba74' };
     case 'Moderate': return { bg: '#854d0e', text: '#fde047' };
-    case 'Low': return { bg: '#166534', text: '#86efac' };
+    case 'Low': return { bg: '#1e3a8a', text: '#93c5fd' };
     default: return { bg: '#374151', text: '#d1d5db' };
   }
 }

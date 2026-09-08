@@ -1,3 +1,4 @@
+import { hasMappedData, currentWeather } from '../utils/dataStatus';
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { XRHandModelFactory } from "three/addons/webxr/XRHandModelFactory.js";
@@ -198,7 +199,14 @@ export async function createExperience(
         state.page === i,
       ),
     );
-    if (state.page === 0) {
+    if (state.page === 2 || !hasMappedData(z)) {
+      p.wrap(state.page === 2
+        ? "Costs and cooling benefits unavailable. Verified local rates and intervention evidence are not connected."
+        : "Zone statistics unavailable. No recent verified morphology data; fallback temperature, risk and population are hidden.",
+        36, 270, 864, 32, "#edc38b", 44, 6);
+      p.text(currentWeather(w) ? w.air_temp_c + "°C · API air temperature" : "Current weather unavailable", 36, 630, 32, "#eafff7");
+      p.wrap(w?.observed_at ? "Open-Meteo weather model · " + w.observed_at + " UTC" : "Source timestamp unavailable", 36, 700, 864, 24);
+    } else if (state.page === 0) {
       p.text(`${z.lst_celsius.toFixed(1)}°C`, 36, 295, 72, "#ffa766");
       p.text(
         `Risk ${z.heat_risk_score} / 100 · ${z.risk_level}`,

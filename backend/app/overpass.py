@@ -126,10 +126,21 @@ async def fetch_zone_data(zone: dict) -> dict:
     query = build_overpass_query(south, west, north, east)
 
     try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(OVERPASS_URL, data={"data": query})
-            response.raise_for_status()
-            data = response.json()
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            data = None
+            for endpoint in (OVERPASS_URL, "https://maps.mail.ru/osm/tools/overpass/api/interpreter"):
+                try:
+                    response = await client.get(endpoint, params={"data": query})
+                    response.raise_for_status()
+                    candidate = response.json()
+                    if candidate.get("remark") or not candidate.get("elements"):
+                        raise ValueError("Incomplete or empty OSM response")
+                    data = candidate
+                    break
+                except (httpx.HTTPError, ValueError):
+                    continue
+            if data is None:
+                raise ValueError("OSM endpoints unavailable")
     except Exception as e:
         print(f"  ⚠️  Overpass failed for {zone['name']}: {e}")
         return generate_fallback_data(zone)

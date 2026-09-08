@@ -342,7 +342,7 @@ export async function buildCity(zones, onProgress, signal) {
         .get(id)
         .material.color.copy(
           new THREE.Color(zone.heat_color).lerp(
-            new THREE.Color("#1de8b2"),
+            new THREE.Color("#3b82f6"),
             Math.min(0.9, drop / 4),
           ),
         );

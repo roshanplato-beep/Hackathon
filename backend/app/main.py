@@ -3,6 +3,10 @@ HeatScape — Urban Heat Reduction Planner
 FastAPI Backend
 """
 import base64
+import asyncio
+import time
+from datetime import datetime, timezone
+from app import overpass
 import json
 import os
 import sys
@@ -185,22 +189,61 @@ async def get_zones():
     }
 
 
+_morphology_attempts = {}
+_morphology_lock = asyncio.Lock()
+
+async def refresh_morphology(zone_id):
+    """Refresh mapped morphology daily; retry failures after 30 minutes."""
+    async with _morphology_lock:
+        profile = zone_profiles[zone_id]
+        if time.time() - _morphology_attempts.get(zone_id, 0) < 1800:
+            return
+        try:
+            stamp = datetime.fromisoformat(profile.get("osm_fetched_at") or "")
+            if (datetime.now(timezone.utc) - stamp).total_seconds() < 86400:
+                return
+        except ValueError:
+            pass
+        _morphology_attempts[zone_id] = time.time()
+        try:
+            data = await asyncio.wait_for(overpass.fetch_zone_data(profile), timeout=18)
+        except Exception:
+            return
+        if not data.get("osm_fetched"):
+            return
+        data["fetched_at"] = datetime.now(timezone.utc).isoformat()
+        data["source_note"] = (
+            "OpenStreetMap via Overpass: mapped coverage, not a complete survey. "
+            "Road area assumes 10m width; institutional land is not verified public ownership. "
+            "Water distance uses mapped feature centres; unmapped features may be missing."
+        )
+        zone_profiles[zone_id] = heat_engine.build_zone_profile(profile, data)
+        try:
+            path = DATA_DIR / "zone_osm_data.json"
+            saved = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+            saved[zone_id] = data
+            path.write_text(json.dumps(saved, indent=2), encoding="utf-8")
+        except OSError:
+            pass  # Serverless filesystem may be read-only; retain in memory.
+
 @app.get("/api/zones/{zone_id}")
 async def get_zone(zone_id: str):
     """Get detailed profile for a single zone including weather."""
     if zone_id not in zone_profiles:
         raise HTTPException(status_code=404, detail=f"Zone '{zone_id}' not found")
+    await refresh_morphology(zone_id)
     profile = zone_profiles[zone_id]
     interventions = select_interventions(profile)
 
     # Fetch weather data
-    base_weather = await fetch_chennai_weather()
-    zone_weather = get_zone_weather(base_weather, zone_id)
+    readings = await climate.fetch_live_air_temps([tuple(profile["center"])])
+    zone_weather = readings[0] if readings else None
 
     return {
         "zone": profile,
         "interventions": interventions,
         "weather": zone_weather,
+        "baseline": heat_engine.BASELINE_PROVENANCE,
     }
 
 

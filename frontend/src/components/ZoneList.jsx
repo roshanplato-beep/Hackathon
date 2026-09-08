@@ -11,7 +11,7 @@ const FILTERS = [
 const SORTS = [
   { id: 'risk', label: 'Risk score', compare: (a, b) => b.heat_risk_score - a.heat_risk_score },
   { id: 'temp', label: 'Temperature', compare: (a, b) => b.lst_celsius - a.lst_celsius },
-  { id: 'delta', label: 'vs city avg', compare: (a, b) => (b.lst_celsius - 33.6) - (a.lst_celsius - 33.6) },
+  { id: 'delta', label: 'vs planning baseline', compare: (a, b) => (b.lst_celsius - b.baseline_lst) - (a.lst_celsius - a.baseline_lst) },
   { id: 'people', label: 'Population', compare: (a, b) => (b.estimated_population || 0) - (a.estimated_population || 0) },
 ]
 
@@ -91,7 +91,7 @@ export default function ZoneList({ zones, selectedZone, onZoneClick }) {
         {visible.length === 0 && <p className="zonelist-empty">No zones match those filters.</p>}
 
         {visible.map(zone => {
-          const delta = (zone.lst_celsius - 33.6).toFixed(1)
+          const delta = Number.isFinite(zone.lst_celsius) && Number.isFinite(zone.baseline_lst) ? (zone.lst_celsius - zone.baseline_lst).toFixed(1) : null
           return (
             <button
               key={zone.id}
@@ -102,15 +102,15 @@ export default function ZoneList({ zones, selectedZone, onZoneClick }) {
             >
               <div className="zone-card-top">
                 <span className="zone-card-badge">
-                  +{delta}°C urban heat island
+                  {delta === null ? 'Heat data unavailable' : `${Number(delta) >= 0 ? '+' : ''}${delta}°C vs planning baseline`}
                 </span>
                 {selectedZone?.id === zone.id && <span className="zone-card-sel">Selected</span>}
               </div>
               <p className="zone-card-name">{zone.name}</p>
               <p className="zone-card-desc">{zone.description}</p>
               <div className="zone-card-meta">
-                <span>{zone.lst_celsius}°C</span>
-                <span>Risk {zone.heat_risk_score}</span>
+                <span>{Number.isFinite(zone.lst_celsius) ? zone.lst_celsius + '°C modelled' : 'Temperature unavailable'}</span>
+                <span>{Number.isFinite(zone.heat_risk_score) ? 'Modelled risk ' + zone.heat_risk_score : 'Risk unavailable'}</span>
                 <span className="muted">{zone.risk_level}</span>
               </div>
             </button>

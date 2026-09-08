@@ -1,3 +1,4 @@
+import { hasMappedData, currentWeather } from '../utils/dataStatus';
 import { useEffect, useRef, useState } from "react";
 import { createExperience } from "./scene";
 import { money, TUTORIAL, weatherStatus } from "./model";
@@ -121,7 +122,7 @@ export default function VRExperience({ zones, supported, onClose }) {
                   <span>
                     {zone.name}
                     <small>
-                      {zone.risk_level} risk · {zone.lst_celsius}°C modelled
+                      {Number.isFinite(zone.lst_celsius) ? zone.risk_level + " risk · " + zone.lst_celsius + "°C modelled" : "Heat data unavailable"}
                     </small>
                   </span>
                   <i style={{ background: zone.heat_color }} />
@@ -134,6 +135,11 @@ export default function VRExperience({ zones, supported, onClose }) {
               ZONE {String(zones.indexOf(z) + 1).padStart(2, "0")} / CHENNAI
             </div>
             <h2>{z?.name}</h2>
+            {(!hasMappedData(z) || state.page === 2) && <div role="status">
+              <p>{state.page === 2 ? 'Cost and cooling estimates unavailable: verified rates and intervention evidence are not connected.' : 'Zone statistics unavailable: recent verified mapping inputs are missing. Fallback figures are hidden.'}</p>
+              <p>{currentWeather(reading) ? reading.air_temp_c + '°C · API air temperature' : 'Current weather unavailable'}</p>
+              <p className="vr-note">Open-Meteo weather model · {reading?.observed_at ?? 'timestamp unavailable'} UTC</p>
+            </div>}
             <div className="vr-tabs">
               {["Profile", "Diagnosis", "Interventions"].map((label, i) => (
                 <button
@@ -145,7 +151,7 @@ export default function VRExperience({ zones, supported, onClose }) {
                 </button>
               ))}
             </div>
-            {state.page === 0 && (
+            {hasMappedData(z) && state.page === 0 && (
               <>
                 <div className="vr-metric">
                   <strong>
@@ -210,7 +216,7 @@ export default function VRExperience({ zones, supported, onClose }) {
                 </p>
               </>
             )}
-            {state.page === 1 && (
+            {hasMappedData(z) && state.page === 1 && (
               <>
                 <h3>Why this zone heats up</h3>
                 <p>
@@ -236,7 +242,7 @@ export default function VRExperience({ zones, supported, onClose }) {
                 </p>
               </>
             )}
-            {state.page === 2 && (
+            {false && state.page === 2 && (
               <>
                 <p>
                   Choose an intervention and watch the selected zone change.

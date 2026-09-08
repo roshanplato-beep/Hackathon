@@ -150,7 +150,7 @@ export default function HeatMap({
               {simulationData?.affected_zones?.[zone.id] ? (
                 <>
                   <span style={{ color: '#ef4444', textDecoration: 'line-through' }}>
-                    {zone.lst_celsius}°C
+                    {Number.isFinite(zone.lst_celsius) ? zone.lst_celsius + '°C modelled' : 'Unavailable'}
                   </span>{' '}
                   <span style={{ color: '#22c55e' }}>
                     → {simulationData.affected_zones[zone.id].new_lst}°C
@@ -160,7 +160,7 @@ export default function HeatMap({
                   </span>
                 </>
               ) : (
-                <>🌡️ {zone.lst_celsius}°C &nbsp; Score: {zone.heat_risk_score}</>
+                <>🌡️ {Number.isFinite(zone.lst_celsius) ? zone.lst_celsius + '°C modelled' : 'Unavailable'} &nbsp; Score: {zone.heat_risk_score ?? 'Unavailable'}</>
               )}
             </div>
           </Tooltip>

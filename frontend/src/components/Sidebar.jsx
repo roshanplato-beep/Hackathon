@@ -1,352 +1,108 @@
 import { useState, useEffect } from 'react';
-import { fetchZoneDetail, diagnoseZone, simulateIntervention, generateReport, fetchLiveClimate } from '../utils/api';
-import { getRiskBadgeColor } from '../utils/colors';
-import InterventionCard from './InterventionCard';
-import CostDashboard from './CostDashboard';
-import DataBadge from './DataBadge';
+import { fetchZoneDetail } from '../utils/api';
+import { hasMappedData, currentWeather } from '../utils/dataStatus';
 
-export default function Sidebar({
-  selectedZone,
-  onClose,
-  onSimulate,
-  simulationData,
-  onClearSimulation,
-}) {
+export default function Sidebar({ selectedZone, onClose }) {
   const [detail, setDetail] = useState(null);
-  const [diagnosis, setDiagnosis] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [diagLoading, setDiagLoading] = useState(false);
-  const [activeSimulation, setActiveSimulation] = useState(null);
-  const [report, setReport] = useState(null);
-  const [reportLoading, setReportLoading] = useState(false);
-  const [live, setLive] = useState(null);
-
+  const [checked, setChecked] = useState(null);
+  const [error, setError] = useState('');
+  const [refresh, setRefresh] = useState(0);
   useEffect(() => {
-    if (!selectedZone) {
-      setDetail(null);
-      setDiagnosis(null);
-      setActiveSimulation(null);
-      setReport(null);
-      return;
-    }
-    setLoading(true);
-    setDiagnosis(null);
-    setActiveSimulation(null);
-    setReport(null);
-    fetchZoneDetail(selectedZone.id)
-      .then(setDetail)
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    setDetail(null); setChecked(null); setError('');
+    if (!selectedZone) return;
+    const update = async () => {
+      setLoading(true);
+      try {
+        const data = await fetchZoneDetail(selectedZone.id);
+        if (!cancelled) { setDetail(data); setError(''); }
+      } catch {
+        if (!cancelled) { setDetail(null); setError('Data service unavailable. No fallback values are shown.'); }
+      } finally {
+        if (!cancelled) { setLoading(false); setChecked(new Date().toISOString()); }
+      }
+    };
+    update();
+    const timer = setInterval(update, 600000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [selectedZone?.id, refresh]);
 
-    setDiagLoading(true);
-    diagnoseZone(selectedZone.id)
-      .then(setDiagnosis)
-      .catch(console.error)
-      .finally(() => setDiagLoading(false));
+  if (!selectedZone) return <aside className="sidebar sidebar-empty">
+    <div className="sidebar-header"><h2>Location data</h2><p>Select a Chennai zone to check its latest available data.</p></div>
+    <div className="sidebar-hint">Grey zone markers mean verified heat-risk inputs are unavailable.</div>
+  </aside>;
 
-    setLive(null);
-    fetchLiveClimate(selectedZone.id)
-      .then(d => setLive(d.readings?.[0] ?? null))
-      .catch(() => setLive(null));
-  }, [selectedZone?.id]);
+  const data = detail?.zone?.id === selectedZone.id ? detail : null;
+  const zone = data?.zone ?? selectedZone;
+  const mapped = hasMappedData(zone);
+  const weather = data?.weather;
+  const weatherValid = currentWeather(weather);
+  const weatherSource = 'Open-Meteo · weather model, not a local sensor';
+  const morphologySource = 'OpenStreetMap / Overpass · mapped features, not a complete survey';
+  const missing = loading ? 'Checking source…' : 'Unavailable';
+  const weatherState = weatherValid ? (weather.status === 'cached' ? 'Cached · recent' : 'Current API') : 'Unavailable';
+  const modelValid = mapped && data?.baseline?.measured === true;
+  const mapReason = mapped ? 'API-derived · estimated coverage' : 'Mapping fetch missing or older than 24 hours; fallback estimates hidden.';
 
-  const handleSimulate = async (interventionId) => {
-    if (activeSimulation === interventionId) {
-      setActiveSimulation(null);
-      onClearSimulation();
-      return;
-    }
-    try {
-      const result = await simulateIntervention(selectedZone.id, interventionId);
-      setActiveSimulation(interventionId);
-      onSimulate(result);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleReport = async () => {
-    setReportLoading(true);
-    try {
-      const result = await generateReport(selectedZone.id);
-      setReport(result.report);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setReportLoading(false);
-    }
-  };
-
-  if (!selectedZone) {
-    return (
-      <div className="sidebar sidebar-empty">
-        <div className="sidebar-header">
-          <h2>HeatScape</h2>
-          <p className="subtitle">Urban Heat Reduction Planner</p>
-        </div>
-        <div className="sidebar-hint">
-          <div className="hint-icon">🗺️</div>
-          <p>Click any zone on the map to analyze heat conditions and explore cooling interventions.</p>
-          <div className="legend">
-            <h4>Heat Risk Scale</h4>
-            <div className="legend-items">
-              <span><i style={{ background: '#dc2626' }}></i> Critical (75+)</span>
-              <span><i style={{ background: '#ea580c' }}></i> High (55–74)</span>
-              <span><i style={{ background: '#d97706' }}></i> Moderate (35–54)</span>
-              <span><i style={{ background: '#16a34a' }}></i> Low (&lt;35)</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const zone = detail?.zone || selectedZone;
-  const interventions = detail?.interventions || [];
-  const badgeColor = getRiskBadgeColor(zone.risk_level);
-
-  return (
-    <div className="sidebar">
-      <div className="sidebar-header">
-        <div className="header-row">
-          <h2>{zone.name}</h2>
-          <button className="close-btn" onClick={onClose}>✕</button>
-        </div>
-        <p className="zone-desc">{zone.description}</p>
-      </div>
-
-      {/* Heat metrics */}
-      <div className="metrics-grid">
-        <div className="metric-card metric-temp">
-          <div className="metric-value">{zone.lst_celsius}°C</div>
-          <div className="metric-label">
-            Surface temp
-            <DataBadge
-              kind="modelled"
-              compact
-              source="Morphology model: measured NASA POWER city baseline adjusted by measured OSM building density, green cover, roads and water proximity. Not a satellite pixel reading."
-            />
-          </div>
-        </div>
-
-        <div className="metric-card">
-          <div className="metric-value">
-            {live?.air_temp_c !== undefined && live?.air_temp_c !== null
-              ? `${live.air_temp_c}°C`
-              : '—'}
-          </div>
-          <div className="metric-label">
-            Air temp, live
-            <DataBadge
-              kind="measured"
-              compact
-              source={
-                live
-                  ? `Open-Meteo 2m air temperature, observed ${live.observed_at} UTC on a ~11km grid.`
-                  : 'Open-Meteo 2m air temperature.'
-              }
-            />
-          </div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-value">{zone.heat_risk_score}</div>
-          <div className="metric-label">
-            Risk score
-            <DataBadge
-              kind="modelled"
-              compact
-              source="Weighted index over modelled surface temp, NDVI proxy, and measured OSM morphology."
-            />
-          </div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-value" style={{
-            background: badgeColor.bg,
-            color: badgeColor.text,
-            padding: '2px 10px',
-            borderRadius: '12px',
-            fontSize: '14px',
-          }}>
-            {zone.risk_level}
-          </div>
-          <div className="metric-label">Risk Level</div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-value">+{(zone.lst_celsius - 33.6).toFixed(1)}°C</div>
-          <div className="metric-label">vs City Avg</div>
-        </div>
-      </div>
-
-      {/* Live Weather */}
-      {detail?.weather && (
-        <div className="weather-bar">
-          <span>🌡️ {detail.weather.temp_celsius}°C</span>
-          <span>💧 {detail.weather.humidity_pct}%</span>
-          <span>💨 {detail.weather.wind_speed_mps} m/s</span>
-          <span className="weather-source">
-            {detail.weather.source === 'openweathermap_live' ? '🟢 Live' : '📊 Avg'}
-          </span>
-          {detail.weather.heat_warning && (
-            <span className="heat-warning">⚠️ {detail.weather.heat_warning}</span>
-          )}
-        </div>
-      )}
-
-      {/* Zone data breakdown */}
-      <div className="data-section">
-        <h3>
-          Zone Profile
-          <DataBadge kind={zone.osm_fetched ? 'measured' : 'modelled'} compact source={zone.osm_fetched ? 'OpenStreetMap via Overpass API' : 'Existing project fallback estimates; OSM survey not verified'} />
-        </h3>
-        <div className="data-bars">
-          <DataBar label="Building Density" value={zone.building_density_pct} unit="%" color="#ef4444" />
-          <DataBar label="Green Cover" value={zone.green_cover_pct} unit="%" color="#22c55e" />
-          <DataBar label="Road Coverage" value={zone.road_coverage_pct} unit="%" color="#6b7280" />
-          <DataBar
-            label="NDVI (proxy)"
-            value={zone.ndvi}
-            unit=""
-            max={1}
-            color="#22c55e"
-            badge="modelled"
-            badgeSource="Linear proxy from measured OSM green cover, not a spectral index from satellite bands."
-          />
-        </div>
-        <div className="zone-stats">
-          <span>🏘️ ~{Math.round(zone.estimated_population || 0).toLocaleString()} residents</span>
-          <span>💧 Water: {zone.water_proximity_m}m away</span>
-          <span>🏛️ Govt land: {zone.govt_land_pct}%</span>
-        </div>
-      </div>
-
-      {/* AI Diagnosis */}
-      <div className="data-section">
-        <h3>🤖 AI Heat Diagnosis</h3>
-        {diagLoading ? (
-          <div className="loading-text">Analyzing zone...</div>
-        ) : diagnosis ? (
-          <div className="diagnosis">
-            <p className="primary-cause">{diagnosis.diagnosis.primary_cause}</p>
-            <ul className="factors">
-              {diagnosis.diagnosis.contributing_factors?.map((f, i) => (
-                <li key={i}>{f}</li>
-              ))}
-            </ul>
-            <p className="urban-context">{diagnosis.diagnosis.urban_context}</p>
-            <p className="comparison">{diagnosis.diagnosis.comparison}</p>
-          </div>
-        ) : (
-          <div className="loading-text">No diagnosis available</div>
-        )}
-      </div>
-
-      {/* Interventions */}
-      {loading ? (
-        <div className="loading-text">Loading interventions...</div>
-      ) : (
-        <div className="data-section">
-          <h3>🛠️ Recommended Interventions</h3>
-          <div className="interventions-list">
-            {interventions.map((intv, i) => (
-              <InterventionCard
-                key={intv.id}
-                intervention={intv}
-                rank={i + 1}
-                isActive={activeSimulation === intv.id}
-                onSimulate={() => handleSimulate(intv.id)}
-                simulationData={activeSimulation === intv.id ? simulationData : null}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Cost-benefit dashboard */}
-      {interventions.length > 0 && (
-        <div className="data-section">
-          <h3>📊 Cost-Benefit Analysis</h3>
-          <CostDashboard interventions={interventions} zone={zone} />
-        </div>
-      )}
-
-      {/* Government feasibility */}
-      <div className="data-section">
-        <h3>🏛️ Government Feasibility</h3>
-        <div className="gov-panel">
-          <div className="gov-item">
-            <span className="gov-label">Ward-level actions</span>
-            <span className="gov-value">
-              {interventions.filter(i => i.authority === 'ward').map(i => i.name).join(', ') || 'None'}
-            </span>
-          </div>
-          <div className="gov-item">
-            <span className="gov-label">Zone approval needed</span>
-            <span className="gov-value">
-              {interventions.filter(i => i.authority === 'zone').map(i => i.name).join(', ') || 'None'}
-            </span>
-          </div>
-          <div className="gov-item">
-            <span className="gov-label">City-level project</span>
-            <span className="gov-value">
-              {interventions.filter(i => i.authority === 'city').map(i => i.name).join(', ') || 'None'}
-            </span>
-          </div>
-          <div className="gov-item">
-            <span className="gov-label">Available govt land</span>
-            <span className="gov-value">{(zone.govt_land_area_sqm || 0).toLocaleString()} sqm</span>
-          </div>
-          <div className="gov-item">
-            <span className="gov-label">Est. beneficiaries</span>
-            <span className="gov-value">{Math.round(zone.estimated_population || 0).toLocaleString()}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Report generation */}
-      <div className="data-section">
-        <button className="report-btn" onClick={handleReport} disabled={reportLoading}>
-          {reportLoading ? '⏳ Generating...' : '📄 Generate Ward Report'}
-        </button>
-        {report && (
-          <div className="report">
-            <h4>{report.title}</h4>
-            <p>{report.executive_summary}</p>
-            <p>{report.current_situation}</p>
-            <h5>Recommendations:</h5>
-            {report.recommendations?.map((rec, i) => (
-              <div key={i} className="rec-item">
-                <strong>#{rec.priority} {rec.intervention}</strong>
-                <ul>
-                  {rec.action_steps?.map((step, j) => <li key={j}>{step}</li>)}
-                </ul>
-                <span className="rec-meta">
-                  Timeline: {rec.timeline} | Authority: {rec.authority_needed}
-                </span>
-              </div>
-            ))}
-            <p className="budget">{report.budget_summary}</p>
-            <p>{report.implementation_notes}</p>
-          </div>
-        )}
-      </div>
+  return <aside className="sidebar">
+    <div className="sidebar-header">
+      <div className="header-row"><h2>{zone.name}</h2><button className="close-btn" onClick={onClose} aria-label="Close location">✕</button></div>
+      <p className="zone-desc">Study area · {zone.center.join(', ')}</p>
+      <button className="btn-secondary" disabled={loading} onClick={() => setRefresh(n => n + 1)}>{loading ? 'Checking…' : 'Refresh data'}</button>
+      <p className="zone-desc">Refreshes every 10 minutes. {checked ? 'Last checked ' + new Date(checked).toLocaleString() : ''}</p>
+      {error && <p role="status">{error}</p>}
     </div>
-  );
+    <section className="data-section">
+      <h3>Current weather</h3>
+      <p className="zone-desc">{weatherSource} · {weatherState}</p>
+      <p className="zone-desc">Valid time: {weather?.observed_at ? weather.observed_at + ' UTC' : 'Unavailable'}</p>
+      <div className="metrics-grid">
+        <Metric label="Air temperature" value={weatherValid ? weather.air_temp_c : null} unit="°C" missing={missing} />
+        <Metric label="Feels like" value={weatherValid ? weather.apparent_temp_c : null} unit="°C" missing={missing} />
+        <Metric label="Humidity" value={weatherValid ? weather.humidity_pct : null} unit="%" missing={missing} />
+        <Metric label="Wind speed" value={weatherValid ? weather.wind_speed_mps : null} unit=" m/s" missing={missing} />
+      </div>
+      <p className="zone-desc">Nearby locations may share a weather grid cell.</p>
+    </section>
+    <section className="data-section">
+      <h3>Zone profile</h3>
+      <p className="zone-desc">{morphologySource}</p>
+      <p className="zone-desc">{mapReason} Fetched: {zone.osm_fetched_at ?? 'Unavailable'}</p>
+      <div className="metrics-grid">
+        <Metric label="Mapped building coverage" value={mapped ? zone.building_density_pct : null} unit="%" missing={missing} />
+        <Metric label="Mapped green coverage" value={mapped ? zone.green_cover_pct : null} unit="%" missing={missing} />
+        <Metric label="Estimated road coverage" value={mapped ? zone.road_coverage_pct : null} unit="%" missing={missing} />
+        <Metric label="Mapped water distance" value={mapped ? zone.water_proximity_m : null} unit=" m" missing={missing} />
+      </div>
+      {mapped && <p className="zone-desc">{zone.morphology_note}</p>}
+    </section>
+    <section className="data-section">
+      <h3>Surface temperature & risk</h3>
+      <p className="zone-desc">Measured local surface temperature: Unavailable. A dated satellite overlay is not a numerical reading for this zone.</p>
+      <div className="metrics-grid">
+        <Metric label="Modelled surface temperature" value={modelValid ? zone.lst_celsius : null} unit="°C" missing={missing} />
+        <Metric label="Modelled risk score" value={modelValid ? zone.heat_risk_score : null} unit=" / 100" missing={missing} />
+      </div>
+      <p className="zone-desc">Source: NASA POWER planning baseline + OSM morphology. Calculated estimate, not live measurement. Mapping timestamp: {zone.osm_fetched_at ?? 'Unavailable'}.</p>
+    </section>
+    <section className="data-section"><h3>Heat diagnosis</h3>
+      <p>{modelValid ? 'Computed from API-derived mapping: building coverage ' + zone.building_density_pct + '%, mapped green cover ' + zone.green_cover_pct + '%. These inputs inform the planning model; they do not establish a measured local heat effect.' : 'Unavailable — verified, recent morphology inputs are needed. No fallback diagnosis is shown.'}</p>
+    </section>
+    <section className="data-section"><h3>Cost & cooling benefits</h3>
+      <p>Unavailable — no verified local rate source or validated intervention-effect dataset is connected.</p>
+      <p className="zone-desc">Source / date: unavailable. Catalogue prices, projected cooling, and assumed beneficiary counts are hidden.</p>
+    </section>
+    <section className="data-section"><h3>Population & land ownership</h3>
+      <p>Unavailable — census and verified ownership sources are not connected.</p>
+      <p className="zone-desc">OSM buildings do not establish population, and institutional land does not establish government ownership.</p>
+    </section>
+  </aside>;
 }
 
-function DataBar({ label, value, unit, color, max = 100, badge, badgeSource }) {
-  const pct = Math.min((value / max) * 100, 100);
-  return (
-    <div className="data-bar">
-      <div className="data-bar-header">
-        <span>
-          {label}
-          {badge && <DataBadge kind={badge} compact source={badgeSource} />}
-        </span>
-        <span>{typeof value === 'number' ? (unit ? `${value}${unit}` : value.toFixed(2)) : value}</span>
-      </div>
-      <div className="data-bar-track">
-        <div className="data-bar-fill" style={{ width: `${pct}%`, background: color }}></div>
-      </div>
-    </div>
-  );
+function Metric({ label, value, unit = '', missing = 'Unavailable' }) {
+  return <div className="metric-card">
+    <div className="metric-value" style={!Number.isFinite(value) ? { fontSize: 15 } : undefined}>{Number.isFinite(value) ? value + unit : missing}</div>
+    <div className="metric-label">{label}</div>
+  </div>;
 }

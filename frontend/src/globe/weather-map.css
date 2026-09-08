@@ -1,0 +1,101 @@
+.weather-map { background: #dbe7eb; color: #24343e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+.weather-map::before { content: ''; position: absolute; inset: 0 0 auto; height: 76px; background: #fff; z-index: 9; border-bottom: 1px solid #dbe1e5; box-shadow: 0 2px 12px #102a3812; }
+.weather-map .globe-canvas { top: 76px; }
+.weather-map .globe-brand { top: 18px; left: 24px; padding: 6px 0; background: transparent; border: 0; backdrop-filter: none; }
+.weather-map .globe-brand-name { color: #24343e; font-size: 24px; font-weight: 750; }
+.weather-map .status-dot { background: #ed743f; }
+.weather-map .chip { border: 0; border-left: 1px solid #d7dfe4; border-radius: 0; margin-left: 8px; padding-left: 16px; color: #6a7a85; font-size: 10px; letter-spacing: .13em; }
+.weather-map .globe-search { top: 17px; right: 24px; width: min(340px, 38vw); }
+.weather-map .globe-search-input { height: 42px; background: #f4f6f8; border: 1px solid #dfe5e9; color: #24343e; border-radius: 8px; padding: 0 16px; }
+.weather-map .globe-search-results { background: white; border-color: #dfe5e9; box-shadow: 0 8px 24px #102a3822; }
+.weather-map .globe-search-results button { color: #24343e; }
+.weather-map .globe-search-results button:hover { background: #edf4f9; color: #24343e; }
+.weather-map .globe-panel { background: #fffffff5; color: #24343e; border: 1px solid #dce3e7; border-radius: 12px; box-shadow: 0 8px 30px #102a3824; }
+.weather-map .globe-panel-thermal { top: 100px; right: 24px; transform: none; width: 270px; padding: 20px; }
+.weather-map .globe-panel h3 { color: #253944; font-size: 19px; }
+.weather-map .globe-panel-head p, .weather-map .globe-note, .weather-map .legend-labels { color: #657783; }
+.weather-map .thermal-layer-row { display: flex; flex-direction: column; gap: 8px; margin-bottom: 22px; }
+.weather-map .filter-chip { background: #f4f7f9; border: 1px solid #e0e6ea; border-radius: 7px; color: #435b69; text-align: left; padding: 11px 12px; font-size: 12px; }
+.weather-map .filter-chip-on { background: #fff1e8; border-color: #ed8c56; color: #a74616; }
+.weather-map .filter-chip:disabled { opacity: .48; cursor: not-allowed; }
+.weather-map .legend-gradient { height: 10px; background: linear-gradient(90deg,#172979,#3b82f6,#22d3ee,#fbbf24,#ef4444,#7f1d1d); }
+.weather-map .weather-source { font-size: 11px; color: #657783; margin-top: 14px; }
+.weather-map .weather-source summary { cursor: pointer; }
+.weather-map .globe-actions { right: 24px; bottom: 48px; gap: 8px; }
+.weather-map .btn-secondary { color: #344e5e; background: #fff; border: 1px solid #dce3e7; box-shadow: 0 3px 14px #102a3822; border-radius: 8px; padding: 12px 16px; }
+.weather-map .globe-actions .btn-secondary:last-child { background: #e96e37; color: #fff; border-color: #e96e37; }
+.weather-map .globe-credit { left: 16px; bottom: 10px; color: #3d5461; background: #ffffffe8; border-radius: 4px; padding: 5px 9px; font-size: 10px; }
+.weather-map .globe-panel-zone { bottom: 64px; left: 24px; }
+@media(max-width: 650px) {
+  .weather-map::before { height: 118px; }
+  .weather-map .globe-canvas { top: 118px; }
+  .weather-map .globe-brand { top: 10px; left: 16px; }
+  .weather-map .globe-search { top: 62px; left: 16px; right: 16px; width: auto; }
+  .weather-map .globe-panel-thermal { top: 132px; right: 12px; width: 224px; padding: 14px; }
+  .weather-map .globe-actions { bottom: 48px; right: 12px; left: 12px; flex-wrap: wrap; justify-content: flex-end; }
+  .weather-map .btn-secondary { padding: 10px 12px; font-size: 12px; }
+  .weather-map .globe-panel-zone { left: 12px; bottom: 146px; width: 210px; }
+}
+
+/* Frosted floating surfaces; the live globe supplies the colour behind glass. */
+.weather-map::before { background: linear-gradient(120deg, #ffffffa8, #edf5ff75); border-color: #ffffff70; backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%); box-shadow: 0 4px 24px #071d3212, inset 0 1px #ffffffb3; }
+.weather-map .globe-canvas { top: 0; }
+.weather-map .globe-panel,
+.weather-map .globe-search-input,
+.weather-map .globe-search-results,
+.weather-map .btn-secondary,
+.weather-map .globe-credit {
+  background: linear-gradient(135deg, #ffffffcc, #e9f2ffc2);
+  border: 1px solid #ffffff9c;
+  backdrop-filter: blur(28px) saturate(155%);
+  -webkit-backdrop-filter: blur(28px) saturate(155%);
+  box-shadow: 0 12px 36px #06162724, inset 0 1px 0 #ffffffe0, inset 0 -1px 0 #ffffff35;
+}
+.weather-map .globe-panel { border-radius: 26px; }
+.weather-map .globe-search-input { border-radius: 22px; }
+.weather-map .globe-search-results { border-radius: 20px; }
+.weather-map .filter-chip { border-radius: 14px; background: #ffffff42; border-color: #ffffff65; color: #304955; transition: background .18s ease, box-shadow .18s ease; }
+.weather-map .filter-chip:hover:not(:disabled) { background: #ffffff85; }
+.weather-map .filter-chip-on { background: #fff1dfb8; border-color: #fff7e8; color: #963c14; box-shadow: 0 3px 12px #b15d1512, inset 0 1px #fff; }
+.weather-map .btn-secondary { border-radius: 22px; min-height: 44px; transition: background .18s ease, transform .18s ease; }
+.weather-map .btn-secondary:hover { background: #ffffffe6; transform: translateY(-1px); }
+.weather-map .globe-actions .btn-secondary:last-child { background: linear-gradient(135deg,#f69056e8,#dc632cdd); border-color: #ffc29aab; box-shadow: 0 8px 24px #983d232b, inset 0 1px #ffdcc7a8; }
+.weather-map .globe-credit { border-radius: 12px; }
+.weather-map .globe-note, .weather-map .weather-source, .weather-map .legend-labels, .weather-map .globe-panel-head p { color: #405867; }
+.weather-map :is(button, input, summary):focus-visible { outline: 3px solid #167af0; outline-offset: 3px; }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .weather-map::before, .weather-map .globe-panel, .weather-map .globe-search-input, .weather-map .globe-search-results, .weather-map .btn-secondary, .weather-map .globe-credit { background-color: #eef3f8; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .weather-map .btn-secondary, .weather-map .filter-chip { transition: none; }
+}
+
+/* Dark glass theme. Keep thermal imagery independent of interface colour. */
+.weather-map { color-scheme: dark; color: #ecf3fa; background: #080e16; }
+.weather-map::before { background: linear-gradient(120deg, #101a28e0, #152335bf); border-color: #ffffff14; box-shadow: 0 4px 24px #0004, inset 0 1px #ffffff12; }
+.weather-map .globe-brand-name { color: #f0f6fc; }
+.weather-map .chip { color: #aabccd; border-color: #ffffff25; }
+.weather-map .globe-panel,
+.weather-map .globe-search-input,
+.weather-map .globe-search-results,
+.weather-map .btn-secondary,
+.weather-map .globe-credit {
+  background: linear-gradient(135deg, #172333df, #0b1626d6);
+  color: #e5eef8;
+  border-color: #ffffff24;
+  box-shadow: 0 12px 36px #0005, inset 0 1px #ffffff20, inset 0 -1px #ffffff08;
+}
+.weather-map .globe-panel h3 { color: #f0f6fc; }
+.weather-map .globe-note, .weather-map .weather-source, .weather-map .legend-labels,
+.weather-map .globe-panel-head p, .weather-map .globe-zone-stats .muted { color: #b4c4d5; }
+.weather-map .globe-search-input::placeholder { color: #9cadbf; }
+.weather-map .globe-search-results button { color: #e5eef8; border-color: #ffffff12; }
+.weather-map .globe-search-results button:hover { background: #ffffff14; color: #fff; }
+.weather-map .filter-chip { background: #ffffff08; border-color: #ffffff18; color: #d1dfec; }
+.weather-map .filter-chip:hover:not(:disabled) { background: #ffffff18; }
+.weather-map .filter-chip-on { background: #ea783327; color: #ffc59a; border-color: #f3a16b65; box-shadow: inset 0 1px #ffffff12; }
+.weather-map .btn-secondary:hover { background: #2a3b50ee; color: #fff; }
+.weather-map .globe-actions .btn-secondary:last-child { background: linear-gradient(135deg,#ee8b4def,#c95b28eb); color: #fff; border-color: #ffbc8666; }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .weather-map::before, .weather-map .globe-panel, .weather-map .globe-search-input, .weather-map .globe-search-results, .weather-map .btn-secondary, .weather-map .globe-credit { background-color: #111c2b; }
+}

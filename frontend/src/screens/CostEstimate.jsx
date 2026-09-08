@@ -57,6 +57,8 @@ export default function CostEstimate({ selectedZone }) {
     )
   }
 
+  if (interventions.length === 0) return <div className="screen-empty"><h2>Cost estimate unavailable</h2><p>{selectedZone.name}: verified local rates, land availability, and cooling-effect evidence are not connected. Fallback plans and totals are hidden.</p></div>;
+
   const toggle = id =>
     setChosen(prev => (prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]))
 

@@ -16,7 +16,7 @@ export default function TopNav({ active, onChange, onBackToGlobe, zones, selecte
         </button>
         <span className="status-dot" />
         <span className="logo-text">HeatScape</span>
-        <span className="chip">Chennai · {zones.length} zones · {hotspots} hotspots</span>
+        <span className="chip">Chennai · {zones.length} zones · {zones.some(z => Number.isFinite(z.heat_risk_score)) ? hotspots + ' modelled hotspots' : 'Risk unavailable'}</span>
       </div>
 
       <nav className="topnav-tabs">

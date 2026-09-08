@@ -8,6 +8,7 @@ import {
   NearFarScalar,
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
+  SceneMode,
   VerticalOrigin,
   Viewer,
 } from 'cesium'
@@ -17,13 +18,14 @@ import { fetchThermalConfig } from '../utils/api'
 import { getHeatColor } from '../utils/colors'
 import { findPlaces } from './search'
 import { addBoundaries, removeBoundaries } from './boundaries'
+import './weather-map.css'
 
 // The field is the subject, so it renders near-opaque. Coastlines and country
 // outlines come from the reference layer drawn above it, not from bleed-through.
 const THERMAL_ALPHA = 0.96
 const SPIN_RADIANS_PER_SECOND = 0.035
 const CHENNAI = { longitude: 80.22, latitude: 13.0 }
-const START_HEIGHT = 24_000_000
+const START_HEIGHT = 9_000_000
 const CHENNAI_HEIGHT = 180_000
 
 export default function GlobeLanding({ zones, onEnter }) {
@@ -45,7 +47,7 @@ export default function GlobeLanding({ zones, onEnter }) {
   // The continuous air-temperature field is the whole point of the landing
   // view, so it starts on rather than hiding behind a toggle.
   const [thermal, setThermal] = useState(true)
-  const [layerKey, setLayerKey] = useState(import.meta.env.PROD ? 'composite' : 'air')
+  const layerKey = 'composite'
   const [config, setConfig] = useState(null)
   const [hovered, setHovered] = useState(null)
   const [tilesPending, setTilesPending] = useState(0)
@@ -64,6 +66,7 @@ export default function GlobeLanding({ zones, onEnter }) {
     let v
     try {
       v = new Viewer(el, {
+        sceneMode: SceneMode.SCENE3D,
         baseLayer: new ImageryLayer(satelliteProvider()),
         baseLayerPicker: false,
         geocoder: false,
@@ -154,7 +157,7 @@ export default function GlobeLanding({ zones, onEnter }) {
       const now = Date.now()
       const dt = (now - last) / 1000
       last = now
-      if (spinning.current) v.camera.rotate(Cartesian3.UNIT_Z, -SPIN_RADIANS_PER_SECOND * dt)
+      // A weather map stays north-up and stationary until the user pans.
     }
     v.clock.onTick.addEventListener(tick)
 
@@ -220,15 +223,13 @@ export default function GlobeLanding({ zones, onEnter }) {
     }
   }, [config, ready])
 
-  // OpenWeatherMap's tiles are semi-transparent overlays meant to sit on a
-  // basemap, so full-colour satellite imagery underneath mutes them badly.
-  // Desaturate and dim the base while the field is showing, which also matches
-  // the flat grey landmass of a conventional temperature map.
+  // Keep natural imagery visible through missing thermal pixels. A cloud gap
+  // must not look like either a black rendering failure or a cold measurement.
   useEffect(() => {
     const base = baseLayer.current
     if (!base) return
-    base.saturation = thermal ? 0.0 : 1.0
-    base.brightness = thermal ? 0.8 : 1.0
+    base.saturation = 1.0
+    base.brightness = 1.0
   }, [thermal, config])
 
   // Fade rather than snap, and never block input while it runs.
@@ -340,7 +341,7 @@ export default function GlobeLanding({ zones, onEnter }) {
   const hotspots = zones?.filter(z => z.heat_risk_score >= 55).length ?? 0
 
   return (
-    <div className="globe-root">
+    <div className="globe-root weather-map">
       <div ref={container} className="globe-canvas" />
 
       {failed && (
@@ -358,7 +359,7 @@ export default function GlobeLanding({ zones, onEnter }) {
       <div className="globe-brand">
         <span className="status-dot" />
         <span className="globe-brand-name">HeatScape</span>
-        <span className="chip">Urban Heat Reduction Planner</span>
+        <span className="chip">WEATHER MAPS</span>
       </div>
 
       {/* Place search */}
@@ -366,7 +367,7 @@ export default function GlobeLanding({ zones, onEnter }) {
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
-          placeholder="Find a place…"
+          placeholder="Search city or location…"
           aria-label="Find a place"
           className="globe-search-input"
         />
@@ -386,14 +387,14 @@ export default function GlobeLanding({ zones, onEnter }) {
       <div className="globe-panel globe-panel-thermal">
         <div className="globe-panel-head">
           <div>
-            <h3>Thermal layer</h3>
-            <p>{config?.quantity ?? 'Loading…'}</p>
+            <h3>Thermal map</h3>
+            
           </div>
           <button
             type="button"
             role="switch"
             aria-checked={thermal}
-            aria-label="Toggle live thermal mapping"
+            aria-label="Toggle thermal map"
             disabled={!ready || !config}
             onClick={() => setThermal(t => !t)}
             className={`toggle ${thermal ? 'toggle-on' : ''}`}
@@ -409,26 +410,12 @@ export default function GlobeLanding({ zones, onEnter }) {
 
         {thermal && config && (
           <div className="globe-legend">
-            <div className="thermal-layer-row">
-              {config.available_layers?.map(l => (
-                <button
-                  key={l.key}
-                  type="button"
-                  disabled={l.unavailable}
-                  aria-pressed={config.layer_key === l.key}
-                  className={`filter-chip ${config.layer_key === l.key ? 'filter-chip-on' : ''}`}
-                  onClick={() => setLayerKey(l.key)}
-                  title={l.unavailable ? 'Needs an OpenWeatherMap key' : l.blurb}
-                >
-                  {l.label}
-                </button>
-              ))}
-            </div>
-
             <div className="legend-gradient" />
             <div className="legend-labels">
-              <span>Cool</span>
-              <span>Hot</span>
+              <span>{config.legend?.min ?? -33}°</span>
+              <span>0°</span>
+              <span>35°</span>
+              <span>{config.legend?.max ?? 67}°C</span>
             </div>
             {tilesPending > 0 && (
               <p className="globe-loading">
@@ -436,9 +423,10 @@ export default function GlobeLanding({ zones, onEnter }) {
                 Loading tiles… ({tilesPending})
               </p>
             )}
-            <p className="globe-note">
-              {config.attribution}. {config.notes}
-            </p>
+            <p className="globe-note">Satellite date · {config.date}</p>
+            <details className="weather-source"><summary>Coverage & source</summary>
+              <p className="globe-note">{config.attribution}. Satellite colour shows surface temperature. Natural imagery shows areas without readings. Ocean blue is not a temperature measurement.</p>
+            </details>
           </div>
         )}
       </div>
@@ -448,8 +436,8 @@ export default function GlobeLanding({ zones, onEnter }) {
           <p className="globe-kicker">Zone</p>
           <h3>{hovered.name}</h3>
           <div className="globe-zone-stats">
-            <span>{hovered.lst_celsius}°C</span>
-            <span>Risk {hovered.heat_risk_score}</span>
+            <span>{Number.isFinite(hovered.lst_celsius) ? hovered.lst_celsius + '°C modelled' : 'Temperature unavailable'}</span>
+            <span>{Number.isFinite(hovered.heat_risk_score) ? 'Modelled risk ' + hovered.heat_risk_score : 'Risk unavailable'}</span>
             <span className="muted">{hovered.risk_level}</span>
           </div>
           <button type="button" className="btn-primary" onClick={() => onEnter(hovered)}>
@@ -459,16 +447,18 @@ export default function GlobeLanding({ zones, onEnter }) {
       )}
 
       <div className="globe-actions">
+        <button type="button" className="btn-secondary" aria-label="Zoom in" onClick={() => viewer.current?.camera.zoomIn(viewer.current.camera.positionCartographic.height * 0.4)}>+</button>
+        <button type="button" className="btn-secondary" aria-label="Zoom out" onClick={() => viewer.current?.camera.zoomOut(viewer.current.camera.positionCartographic.height * 0.4)}>−</button>
         <button type="button" className="btn-secondary" onClick={flyToChennai}>
-          Fly to Chennai
+          Chennai ↗
         </button>
         <button type="button" className="btn-secondary" onClick={() => onEnter(null)}>
-          Enter workspace →
+          Plan a cooler city →
         </button>
       </div>
 
       <p className="globe-credit">
-        {zones?.length ?? 0} zones · {hotspots} hotspots · Cesium · Esri · NASA GIBS
+        {zones?.length ?? 0} zones · {zones?.some(z => Number.isFinite(z.heat_risk_score)) ? hotspots + ' modelled hotspots' : 'Risk data unavailable'} · Cesium · Esri · NASA GIBS
       </p>
     </div>
   )

@@ -99,7 +99,11 @@ def build_estimate(zone: dict, interventions: list[dict], req: EstimateRequest) 
         cost = area * rate if rate else float(intv.get("estimated_cost_inr", 0) or 0)
         material_total += cost
         total_area += area
-        combined_drop += float(intv.get("temp_drop", 0) or 0)
+        drop = float(intv.get("temp_drop", 0) or 0)
+        if rate and intv["id"] in req.areas_sqm:
+            drop *= max(0, area) / max(float(intv.get("estimated_area_sqm", 0)), 1)
+            drop = min(drop, float(intv.get("local_reference_drop_c", drop)))
+        combined_drop += drop
         line_items.append({
             "id": intv["id"],
             "name": intv["name"],
@@ -111,7 +115,7 @@ def build_estimate(zone: dict, interventions: list[dict], req: EstimateRequest) 
             "unit": "m²" if rate else "recommended package",
             "unit_rate_inr": rate if rate else cost,
             "amount_inr": round(cost, 2),
-            "temp_drop_c": intv.get("temp_drop", 0),
+            "temp_drop_c": drop,
             "authority": intv.get("authority", "zone"),
             "source": intv.get("source", ""),
         })
@@ -150,8 +154,9 @@ def build_estimate(zone: dict, interventions: list[dict], req: EstimateRequest) 
             "cost_per_person_inr": round(total / population, 2) if population else None,
         },
         "notice": (
-            "Indicative planning figures from published unit rates, not a "
-            "tendered quote. Local rates and site conditions will vary."
+            "Concept estimates using unverified catalogue rates and assumed installation allowances. "
+            "Cooling is area-weighted model output; population is a building-count proxy, "
+            "not verified beneficiaries. Local quotes, ownership checks and validation required."
         ),
     }
 

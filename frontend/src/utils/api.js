@@ -1,3 +1,4 @@
+import { displayZone } from './dataStatus';
 const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8000' : '');
 // A public serverless demo has no shared user database. Keep hosted plans and
 // field notes private to this browser rather than writing ephemeral server files.
@@ -99,12 +100,13 @@ export async function fetchZones() {
   try {
     const res = await fetch(`${API_BASE}/api/zones`, { signal: AbortSignal.timeout(12000) });
     if (!res.ok) throw new Error('Failed to fetch zones');
-    return await res.json();
+    const data = await res.json();
+    return { ...data, zones: data.zones.map(displayZone) };
   } catch {
     const res = await fetch('/vr/profiles.json', { signal: AbortSignal.timeout(8000) });
     if (!res.ok) throw new Error('API and bundled zone snapshot unavailable');
     const snapshot = await res.json();
-    const zones = Object.values(snapshot.profiles).map(d => d.zone).sort((a,b) => b.heat_risk_score-a.heat_risk_score);
+    const zones = Object.values(snapshot.profiles).map(d => displayZone(d.zone)).sort((a,b) => b.heat_risk_score-a.heat_risk_score);
     return { zones, meta: { city:'Chennai', total:zones.length, snapshot:snapshot.generated_at, baseline_provenance:snapshot.baseline } };
   }
 }
@@ -112,7 +114,8 @@ export async function fetchZones() {
 export async function fetchZoneDetail(zoneId) {
   const res = await fetch(`${API_BASE}/api/zones/${zoneId}`);
   if (!res.ok) throw new Error('Failed to fetch zone detail');
-  return res.json();
+  const data = await res.json();
+  return { ...data, zone: displayZone(data.zone), interventions: [], data_notice: 'Verified rates and cooling evidence unavailable.' };
 }
 
 export async function simulateIntervention(zoneId, interventionId) {
