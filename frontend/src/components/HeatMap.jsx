@@ -23,7 +23,7 @@ function createInterventionIcon(emoji) {
   });
 }
 
-function PulsingHotspot({ position, score }) {
+function PulsingHotspot({ position }) {
   const map = useMap();
   const markerRef = useRef(null);
 
@@ -169,7 +169,7 @@ export default function HeatMap({
 
       {/* Pulsing hotspot markers */}
       {!selectedZone && hotspots.map(zone => (
-        <PulsingHotspot key={`pulse-${zone.id}`} position={zone.center} score={zone.heat_risk_score} />
+        <PulsingHotspot key={`pulse-${zone.id}`} position={zone.center} />
       ))}
 
       {/* Simulation effect radius */}

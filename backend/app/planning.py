@@ -5,9 +5,11 @@ field survey records.
 Backs the Site Planner, Cost Estimate and Mobile Survey screens. Estimates are
 computed from the same intervention data the recommender uses, so a plan and its
 price never disagree. Plans and surveys persist to JSON files beside the zone
-data — adequate for a single-user planning tool, and easy to inspect.
+data — adequate for a single-user planning tool, and easy to inspect. Where that
+directory is read-only (serverless), they fall back to the temp dir.
 """
 import json
+import tempfile
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,8 +18,30 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 DATA_DIR = Path(__file__).parent.parent / "data"
-PLANS_FILE = DATA_DIR / "zone_plans.json"
-SURVEYS_FILE = DATA_DIR / "zone_surveys.json"
+
+
+def _store_dir() -> Path:
+    """Directory that actually accepts writes.
+
+    Serverless bundles mount the deployment read-only, so writing beside the
+    zone data raises OSError there. Fall back to the temp dir: saves become
+    per-instance rather than durable, but the endpoints answer instead of 500ing.
+    """
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        probe = DATA_DIR / ".write-probe"
+        probe.write_text("", encoding="utf-8")
+        probe.unlink()
+        return DATA_DIR
+    except OSError:
+        fallback = Path(tempfile.gettempdir()) / "heatscape"
+        fallback.mkdir(parents=True, exist_ok=True)
+        return fallback
+
+
+STORE_DIR = _store_dir()
+PLANS_FILE = STORE_DIR / "zone_plans.json"
+SURVEYS_FILE = STORE_DIR / "zone_surveys.json"
 
 # Indian municipal procurement conventions, applied on top of raw material cost.
 DEFAULT_INSTALLATION_PCT = 18.0
